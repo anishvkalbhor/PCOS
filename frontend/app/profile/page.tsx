@@ -12,12 +12,10 @@ import {
   Droplet, 
   Ruler, 
   Weight,
-  Camera,
-  Save,
+  Edit,
   ArrowLeft,
-  CheckCircle2,
-  AlertCircle,
-  Loader2
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 
 type ProfileData = {
@@ -38,26 +36,8 @@ type ProfileData = {
 export default function ProfilePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [isNewUser, setIsNewUser] = useState(false);
-
-  const [form, setForm] = useState<ProfileData>({
-    email: "",
-    first_name: "",
-    last_name: "",
-    phone: "",
-    address: "",
-    blood_group: "",
-    date_of_birth: "",
-    age: null,
-    height_cm: null,
-    weight_kg: null,
-    profile_picture: null,
-    is_complete: false,
-  });
+  const [profile, setProfile] = useState<ProfileData | null>(null);
 
   useEffect(() => {
     fetchProfile();
@@ -77,15 +57,12 @@ export default function ProfilePage() {
       }
 
       const data = await res.json();
-      setForm({
-        ...data,
-        phone: data.phone || "",
-        address: data.address || "",
-        blood_group: data.blood_group || "",
-        date_of_birth: data.date_of_birth || "",
-      });
-      
-      setIsNewUser(!data.is_complete);
+      setProfile(data);
+
+      // If profile is incomplete, redirect to edit page
+      if (!data.is_complete) {
+        router.push("/profile/edit");
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -93,76 +70,9 @@ export default function ProfilePage() {
     }
   }
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
-
-    // Auto-calculate age from date of birth
-    if (name === "date_of_birth" && value) {
-      const birthDate = new Date(value);
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      setForm(prev => ({ ...prev, age }));
-    }
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-    setSuccess(false);
-
-    try {
-      const token = getCookie("pcos_token");
-      const payload = {
-        first_name: form.first_name,
-        last_name: form.last_name,
-        phone: form.phone || null,
-        address: form.address || null,
-        blood_group: form.blood_group || null,
-        date_of_birth: form.date_of_birth || null,
-        age: form.age,
-        height_cm: form.height_cm ? parseFloat(form.height_cm.toString()) : null,
-        weight_kg: form.weight_kg ? parseFloat(form.weight_kg.toString()) : null,
-        profile_picture: form.profile_picture,
-      };
-
-      const res = await fetch("http://127.0.0.1:8000/api/profile/me", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to save profile");
-      }
-
-      const data = await res.json();
-      setSuccess(true);
-      
-      // Redirect to assess page if this is a new user completing profile
-      if (isNewUser && data.is_complete) {
-        setTimeout(() => {
-          router.push("/assess");
-        }, 1500);
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to save profile");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   // Calculate BMI
-  const bmi = form.height_cm && form.weight_kg 
-    ? (form.weight_kg / Math.pow(form.height_cm / 100, 2)).toFixed(1)
+  const bmi = profile?.height_cm && profile?.weight_kg 
+    ? (profile.weight_kg / Math.pow(profile.height_cm / 100, 2)).toFixed(1)
     : null;
 
   if (loading) {
@@ -175,6 +85,22 @@ export default function ProfilePage() {
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 flex items-start gap-3 max-w-md">
+          <AlertCircle className="text-red-600 shrink-0 mt-0.5" size={20} />
+          <div>
+            <p className="text-red-900 font-semibold">Error Loading Profile</p>
+            <p className="text-red-700 text-sm mt-1">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-teal-50/30 to-purple-50/30 py-12 px-4">
@@ -193,47 +119,59 @@ export default function ProfilePage() {
             <span className="font-medium">Back</span>
           </button>
           
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-teal-600 to-purple-600 rounded-2xl text-white shadow-lg">
-              <User size={32} />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-gradient-to-br from-teal-600 to-purple-600 rounded-2xl text-white shadow-lg">
+                <User size={32} />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-slate-900">My Profile</h1>
+                <p className="text-slate-600 mt-1">Your personal and medical information</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900">
-                {isNewUser ? "Complete Your Profile" : "My Profile"}
-              </h1>
-              <p className="text-slate-600 mt-1">
-                {isNewUser 
-                  ? "Let's get to know you better for personalized care" 
-                  : "Manage your personal and medical information"}
-              </p>
-            </div>
+
+            <button
+              onClick={() => router.push("/profile/edit")}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-600 to-purple-600 hover:from-teal-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
+            >
+              <Edit size={18} />
+              <span>Edit Profile</span>
+            </button>
           </div>
         </div>
 
-        {/* Success/Error Messages */}
-        {success && (
-          <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3 animate-fadeIn">
-            <CheckCircle2 className="text-emerald-600 shrink-0 mt-0.5" size={20} />
-            <div>
-              <p className="text-emerald-900 font-semibold text-sm">Profile Saved Successfully!</p>
-              {isNewUser && (
-                <p className="text-emerald-700 text-sm mt-0.5">Redirecting to assessment...</p>
-              )}
+        <div className="space-y-6">
+          {/* Profile Picture & Basic Info */}
+          <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden">
+            <div className="bg-gradient-to-r from-slate-700 to-slate-900 px-6 py-8">
+              <div className="flex items-center gap-6">
+                {/* Profile Picture */}
+                {profile.profile_picture ? (
+                  <img
+                    src={profile.profile_picture}
+                    alt={`${profile.first_name} ${profile.last_name}`}
+                    className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-teal-100 to-purple-100 flex items-center justify-center border-4 border-white shadow-lg">
+                    <User size={40} className="text-slate-600" />
+                  </div>
+                )}
+
+                {/* Name & Email */}
+                <div className="flex-1 text-white">
+                  <h2 className="text-2xl font-bold">
+                    {profile.first_name} {profile.last_name}
+                  </h2>
+                  <p className="text-slate-200 mt-1 flex items-center gap-2">
+                    <Mail size={16} />
+                    {profile.email}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-        )}
 
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 animate-shake">
-            <AlertCircle className="text-red-600 shrink-0 mt-0.5" size={20} />
-            <div>
-              <p className="text-red-900 font-semibold text-sm">Error</p>
-              <p className="text-red-700 text-sm mt-0.5">{error}</p>
-            </div>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Personal Information Card */}
           <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden">
             <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4 text-white">
@@ -243,130 +181,57 @@ export default function ProfilePage() {
               </h2>
             </div>
 
-            <div className="p-6 space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* First Name */}
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <User size={16} className="text-teal-600" />
-                    First Name *
-                  </label>
-                  <input
-                    name="first_name"
-                    type="text"
-                    value={form.first_name}
-                    onChange={handleChange}
-                    onFocus={() => setFocusedField('first_name')}
-                    onBlur={() => setFocusedField(null)}
-                    required
-                    className={`w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-100 outline-none transition-all duration-200 text-slate-900 bg-white ${
-                      focusedField === 'first_name' ? 'scale-[1.02]' : ''
-                    }`}
-                    placeholder="John"
-                  />
-                </div>
-
-                {/* Last Name */}
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <User size={16} className="text-teal-600" />
-                    Last Name *
-                  </label>
-                  <input
-                    name="last_name"
-                    type="text"
-                    value={form.last_name}
-                    onChange={handleChange}
-                    onFocus={() => setFocusedField('last_name')}
-                    onBlur={() => setFocusedField(null)}
-                    required
-                    className={`w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-100 outline-none transition-all duration-200 text-slate-900 bg-white ${
-                      focusedField === 'last_name' ? 'scale-[1.02]' : ''
-                    }`}
-                    placeholder="Doe"
-                  />
-                </div>
-              </div>
-
-              {/* Email (Read-only) */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <Mail size={16} className="text-slate-400" />
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={form.email}
-                  disabled
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-600 cursor-not-allowed"
-                />
-                <p className="text-xs text-slate-500">Email cannot be changed</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Date of Birth */}
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
                     <Calendar size={16} className="text-teal-600" />
-                    Date of Birth *
-                  </label>
-                  <input
-                    name="date_of_birth"
-                    type="date"
-                    value={form.date_of_birth || ""}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-100 outline-none transition-all duration-200 text-slate-900 bg-white"
-                  />
+                    Date of Birth
+                  </div>
+                  <p className="text-lg font-semibold text-slate-900">
+                    {profile.date_of_birth 
+                      ? new Date(profile.date_of_birth).toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })
+                      : "Not provided"}
+                  </p>
                 </div>
 
-                {/* Age (Auto-calculated) */}
+                {/* Age */}
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <Calendar size={16} className="text-slate-400" />
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                    <Calendar size={16} className="text-teal-600" />
                     Age
-                  </label>
-                  <input
-                    type="number"
-                    value={form.age || ""}
-                    disabled
-                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-600 cursor-not-allowed"
-                  />
-                  <p className="text-xs text-slate-500">Auto-calculated from date of birth</p>
+                  </div>
+                  <p className="text-lg font-semibold text-slate-900">
+                    {profile.age ? `${profile.age} years` : "Not calculated"}
+                  </p>
                 </div>
-              </div>
 
-              {/* Phone */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <Phone size={16} className="text-teal-600" />
-                  Phone Number *
-                </label>
-                <input
-                  name="phone"
-                  type="tel"
-                  value={form.phone || ""}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-100 outline-none transition-all duration-200 text-slate-900 bg-white"
-                  placeholder="+1 (555) 000-0000"
-                />
-              </div>
+                {/* Phone */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                    <Phone size={16} className="text-teal-600" />
+                    Phone Number
+                  </div>
+                  <p className="text-lg font-semibold text-slate-900">
+                    {profile.phone || "Not provided"}
+                  </p>
+                </div>
 
-              {/* Address */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <MapPin size={16} className="text-teal-600" />
-                  Address
-                </label>
-                <textarea
-                  name="address"
-                  value={form.address || ""}
-                  onChange={handleChange}
-                  rows={3}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-100 outline-none transition-all duration-200 text-slate-900 bg-white resize-none"
-                  placeholder="123 Main St, City, State, ZIP"
-                />
+                {/* Address */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                    <MapPin size={16} className="text-teal-600" />
+                    Address
+                  </div>
+                  <p className="text-lg font-semibold text-slate-900">
+                    {profile.address || "Not provided"}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -380,74 +245,49 @@ export default function ProfilePage() {
               </h2>
             </div>
 
-            <div className="p-6 space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Blood Group */}
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
                     <Droplet size={16} className="text-purple-600" />
-                    Blood Group *
-                  </label>
-                  <select
-                    name="blood_group"
-                    value={form.blood_group || ""}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 outline-none transition-all duration-200 text-slate-900 bg-white"
-                  >
-                    <option value="">Select</option>
-                    {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map((bg) => (
-                      <option key={bg} value={bg}>
-                        {bg}
-                      </option>
-                    ))}
-                  </select>
+                    Blood Group
+                  </div>
+                  <p className="text-lg font-semibold text-slate-900">
+                    {profile.blood_group || "Not provided"}
+                  </p>
                 </div>
 
                 {/* Height */}
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
                     <Ruler size={16} className="text-purple-600" />
-                    Height (cm) *
-                  </label>
-                  <input
-                    name="height_cm"
-                    type="number"
-                    step="0.1"
-                    value={form.height_cm || ""}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 outline-none transition-all duration-200 text-slate-900 bg-white"
-                    placeholder="165"
-                  />
+                    Height
+                  </div>
+                  <p className="text-lg font-semibold text-slate-900">
+                    {profile.height_cm ? `${profile.height_cm} cm` : "Not provided"}
+                  </p>
                 </div>
 
                 {/* Weight */}
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
                     <Weight size={16} className="text-purple-600" />
-                    Weight (kg) *
-                  </label>
-                  <input
-                    name="weight_kg"
-                    type="number"
-                    step="0.1"
-                    value={form.weight_kg || ""}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 outline-none transition-all duration-200 text-slate-900 bg-white"
-                    placeholder="60"
-                  />
+                    Weight
+                  </div>
+                  <p className="text-lg font-semibold text-slate-900">
+                    {profile.weight_kg ? `${profile.weight_kg} kg` : "Not provided"}
+                  </p>
                 </div>
               </div>
 
               {/* BMI Display */}
               {bmi && (
-                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 animate-fadeIn">
+                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-semibold text-purple-900">Body Mass Index (BMI)</p>
-                      <p className="text-xs text-purple-700 mt-1">Auto-calculated from height and weight</p>
+                      <p className="text-xs text-purple-700 mt-1">Calculated from height and weight</p>
                     </div>
                     <div className="text-3xl font-bold text-purple-600">{bmi}</div>
                   </div>
@@ -455,28 +295,7 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
-
-          {/* Submit Button */}
-          <div className="flex gap-4">
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex-1 bg-gradient-to-r from-teal-600 to-purple-600 hover:from-teal-700 hover:to-purple-700 text-white py-4 rounded-xl font-bold text-lg transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="animate-spin" size={20} />
-                  <span>Saving...</span>
-                </>
-              ) : (
-                <>
-                  <Save size={20} />
-                  <span>{isNewUser ? "Complete Profile" : "Save Changes"}</span>
-                </>
-              )}
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
     </div>
   );

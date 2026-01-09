@@ -55,9 +55,9 @@ export default function Home() {
 
       if (res.ok) {
         const profile = await res.json();
-        // Redirect to profile page if incomplete
+        // Redirect to profile edit page if incomplete
         if (!profile.is_complete) {
-          router.push("/profile");
+          router.push("/profile/edit");
         }
       }
     } catch (err) {
