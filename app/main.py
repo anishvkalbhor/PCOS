@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.health import router as health_router
 from app.api.pcos import router as pcos_router
 from app.api.auth import router as auth_router
+from app.api.assessments import router as assessments_router
 from app.init_db import init_db
 from app.api import profile
 
@@ -37,4 +38,5 @@ def on_startup():
 app.include_router(health_router)
 app.include_router(pcos_router)
 app.include_router(auth_router)
+app.include_router(assessments_router)
 app.include_router(profile.router)

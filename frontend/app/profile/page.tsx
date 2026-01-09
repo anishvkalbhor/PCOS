@@ -3,19 +3,20 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getCookie } from "@/lib/cookies";
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Calendar, 
-  Droplet, 
-  Ruler, 
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Droplet,
+  Ruler,
   Weight,
   Edit,
   ArrowLeft,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 
 type ProfileData = {
@@ -52,14 +53,11 @@ export default function ProfilePage() {
         },
       });
 
-      if (!res.ok) {
-        throw new Error("Failed to fetch profile");
-      }
+      if (!res.ok) throw new Error("Failed to fetch profile");
 
       const data = await res.json();
       setProfile(data);
 
-      // If profile is incomplete, redirect to edit page
       if (!data.is_complete) {
         router.push("/profile/edit");
       }
@@ -70,233 +68,192 @@ export default function ProfilePage() {
     }
   }
 
-  // Calculate BMI
-  const bmi = profile?.height_cm && profile?.weight_kg 
-    ? (profile.weight_kg / Math.pow(profile.height_cm / 100, 2)).toFixed(1)
-    : null;
+  const bmi =
+    profile?.height_cm && profile?.weight_kg
+      ? (profile.weight_kg / Math.pow(profile.height_cm / 100, 2)).toFixed(1)
+      : null;
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-teal-600 mx-auto mb-4" />
-          <p className="text-slate-600 font-medium">Loading profile...</p>
+          <p className="text-slate-600 font-medium">Loading profile…</p>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 flex items-start gap-3 max-w-md">
-          <AlertCircle className="text-red-600 shrink-0 mt-0.5" size={20} />
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 flex gap-3 max-w-md">
+          <AlertCircle className="text-red-600 mt-1" />
           <div>
-            <p className="text-red-900 font-semibold">Error Loading Profile</p>
-            <p className="text-red-700 text-sm mt-1">{error}</p>
+            <p className="font-semibold text-red-900">Unable to load profile</p>
+            <p className="text-sm text-red-700">{error}</p>
           </div>
         </div>
       </div>
     );
   }
 
-  if (!profile) return null;
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-teal-50/30 to-purple-50/30 py-12 px-4">
-      {/* Decorative Elements */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-teal-400/10 rounded-full blur-3xl -z-10"></div>
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-400/10 rounded-full blur-3xl -z-10"></div>
-
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
+    <div className="min-h-screen bg-slate-50 px-4 py-12">
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* HEADER */}
+        <div className="flex items-center justify-between">
           <button
             onClick={() => router.back()}
-            className="inline-flex items-center gap-2 text-slate-600 hover:text-teal-600 transition-colors mb-4 group"
+            className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-teal-600"
           >
-            <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-            <span className="font-medium">Back</span>
+            <ArrowLeft size={18} />
+            Back
           </button>
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-teal-600 to-purple-600 rounded-2xl text-white shadow-lg">
-                <User size={32} />
+
+          <button
+            onClick={() => router.push("/profile/edit")}
+            className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold shadow"
+          >
+            <Edit size={16} />
+            Edit Profile
+          </button>
+        </div>
+
+        {/* PROFILE HEADER */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <div className="flex items-center gap-6">
+            {/* Profile Picture */}
+            {profile.profile_picture ? (
+              <img
+                src={profile.profile_picture}
+                alt={`${profile.first_name} ${profile.last_name}`}
+                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-teal-100 to-purple-100 flex items-center justify-center border-4 border-white shadow-lg">
+                {" "}
+                <User size={40} className="text-slate-600" />{" "}
               </div>
+            )}
+
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold text-slate-900">
+                {profile.first_name} {profile.last_name}
+              </h1>
+              <p className="text-slate-600 flex items-center gap-2 mt-1">
+                <Mail size={16} /> {profile.email}
+              </p>
+            </div>
+
+            {profile.is_complete && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
+                <CheckCircle2 className="text-green-600" size={18} />
+                <span className="text-sm font-semibold text-green-700">
+                  Profile Complete
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* PERSONAL INFO */}
+        <Section title="Personal Information">
+          <InfoGrid>
+            <Info label="Date of Birth" icon={<Calendar size={16} />}>
+              {profile.date_of_birth
+                ? new Date(profile.date_of_birth).toLocaleDateString()
+                : "Not provided"}
+            </Info>
+
+            <Info label="Age" icon={<Calendar size={16} />}>
+              {profile.age ? `${profile.age} years` : "—"}
+            </Info>
+
+            <Info label="Phone" icon={<Phone size={16} />}>
+              {profile.phone || "Not provided"}
+            </Info>
+
+            <Info label="Address" icon={<MapPin size={16} />}>
+              {profile.address || "Not provided"}
+            </Info>
+          </InfoGrid>
+        </Section>
+
+        {/* MEDICAL INFO */}
+        <Section title="Medical Information">
+          <InfoGrid>
+            <Info label="Blood Group" icon={<Droplet size={16} />}>
+              {profile.blood_group || "Not provided"}
+            </Info>
+
+            <Info label="Height" icon={<Ruler size={16} />}>
+              {profile.height_cm ? `${profile.height_cm} cm` : "—"}
+            </Info>
+
+            <Info label="Weight" icon={<Weight size={16} />}>
+              {profile.weight_kg ? `${profile.weight_kg} kg` : "—"}
+            </Info>
+          </InfoGrid>
+
+          {bmi && (
+            <div className="mt-6 bg-teal-50 border border-teal-200 rounded-xl p-4 flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-slate-900">My Profile</h1>
-                <p className="text-slate-600 mt-1">Your personal and medical information</p>
+                <p className="text-sm font-semibold text-teal-900">BMI</p>
+                <p className="text-xs text-teal-700">
+                  Calculated from height and weight
+                </p>
               </div>
+              <p className="text-3xl font-bold text-teal-600">{bmi}</p>
             </div>
-
-            <button
-              onClick={() => router.push("/profile/edit")}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-600 to-purple-600 hover:from-teal-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
-            >
-              <Edit size={18} />
-              <span>Edit Profile</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          {/* Profile Picture & Basic Info */}
-          <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden">
-            <div className="bg-gradient-to-r from-slate-700 to-slate-900 px-6 py-8">
-              <div className="flex items-center gap-6">
-                {/* Profile Picture */}
-                {profile.profile_picture ? (
-                  <img
-                    src={profile.profile_picture}
-                    alt={`${profile.first_name} ${profile.last_name}`}
-                    className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
-                  />
-                ) : (
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-teal-100 to-purple-100 flex items-center justify-center border-4 border-white shadow-lg">
-                    <User size={40} className="text-slate-600" />
-                  </div>
-                )}
-
-                {/* Name & Email */}
-                <div className="flex-1 text-white">
-                  <h2 className="text-2xl font-bold">
-                    {profile.first_name} {profile.last_name}
-                  </h2>
-                  <p className="text-slate-200 mt-1 flex items-center gap-2">
-                    <Mail size={16} />
-                    {profile.email}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Personal Information Card */}
-          <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden">
-            <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4 text-white">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <User size={24} />
-                Personal Information
-              </h2>
-            </div>
-
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Date of Birth */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-                    <Calendar size={16} className="text-teal-600" />
-                    Date of Birth
-                  </div>
-                  <p className="text-lg font-semibold text-slate-900">
-                    {profile.date_of_birth 
-                      ? new Date(profile.date_of_birth).toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })
-                      : "Not provided"}
-                  </p>
-                </div>
-
-                {/* Age */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-                    <Calendar size={16} className="text-teal-600" />
-                    Age
-                  </div>
-                  <p className="text-lg font-semibold text-slate-900">
-                    {profile.age ? `${profile.age} years` : "Not calculated"}
-                  </p>
-                </div>
-
-                {/* Phone */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-                    <Phone size={16} className="text-teal-600" />
-                    Phone Number
-                  </div>
-                  <p className="text-lg font-semibold text-slate-900">
-                    {profile.phone || "Not provided"}
-                  </p>
-                </div>
-
-                {/* Address */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-                    <MapPin size={16} className="text-teal-600" />
-                    Address
-                  </div>
-                  <p className="text-lg font-semibold text-slate-900">
-                    {profile.address || "Not provided"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Medical Information Card */}
-          <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4 text-white">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <Droplet size={24} />
-                Medical Information
-              </h2>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Blood Group */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-                    <Droplet size={16} className="text-purple-600" />
-                    Blood Group
-                  </div>
-                  <p className="text-lg font-semibold text-slate-900">
-                    {profile.blood_group || "Not provided"}
-                  </p>
-                </div>
-
-                {/* Height */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-                    <Ruler size={16} className="text-purple-600" />
-                    Height
-                  </div>
-                  <p className="text-lg font-semibold text-slate-900">
-                    {profile.height_cm ? `${profile.height_cm} cm` : "Not provided"}
-                  </p>
-                </div>
-
-                {/* Weight */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-                    <Weight size={16} className="text-purple-600" />
-                    Weight
-                  </div>
-                  <p className="text-lg font-semibold text-slate-900">
-                    {profile.weight_kg ? `${profile.weight_kg} kg` : "Not provided"}
-                  </p>
-                </div>
-              </div>
-
-              {/* BMI Display */}
-              {bmi && (
-                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-purple-900">Body Mass Index (BMI)</p>
-                      <p className="text-xs text-purple-700 mt-1">Calculated from height and weight</p>
-                    </div>
-                    <div className="text-3xl font-bold text-purple-600">{bmi}</div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+          )}
+        </Section>
       </div>
+    </div>
+  );
+}
+
+/* =================== UI HELPERS =================== */
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+      <div className="px-6 py-4 border-b">
+        <h2 className="text-lg font-bold text-slate-800">{title}</h2>
+      </div>
+      <div className="p-6">{children}</div>
+    </div>
+  );
+}
+
+function InfoGrid({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{children}</div>
+  );
+}
+
+function Info({
+  label,
+  icon,
+  children,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase">
+        <span className="text-teal-600">{icon}</span>
+        {label}
+      </div>
+      <div className="text-slate-900 font-medium">{children}</div>
     </div>
   );
 }
