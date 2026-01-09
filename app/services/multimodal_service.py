@@ -39,6 +39,37 @@ META_MODEL = joblib.load(
 )
 
 # =====================================================
+# CLINICAL DATA SUFFICIENCY RULES
+# =====================================================
+
+# Absolute required fields
+REQUIRED_CORE_FIELDS = [
+    "age_yrs",
+    "cycler/i",
+    "cycle_lengthdays",
+]
+
+# At least ONE hormonal indicator
+HORMONAL_FIELDS = [
+    "lhmiu/ml",
+    "fshmiu/ml",
+    "amhng/ml",
+]
+
+# At least ONE ovarian morphology indicator
+OVARIAN_FIELDS = [
+    "follicle_no._l",
+    "follicle_no._r",
+    "avg._f_size_l_mm",
+    "avg._f_size_r_mm",
+    "endometrium_mm",
+]
+
+# Minimum numeric fields required overall
+MIN_NUMERIC_FIELDS = 6
+
+
+# =====================================================
 # LOAD ULTRASOUND MODEL
 # =====================================================
 ultrasound_model = CatBoostClassifier()
@@ -178,6 +209,57 @@ def build_meta_features(hormonal_prob, metabolic_prob, symptom_prob):
 
     return pd.DataFrame([meta])
 
+def check_data_sufficiency(df: pd.DataFrame, has_ultrasound: bool):
+    missing = []
+    present_numeric = 0
+
+    # Check core required fields
+    for f in REQUIRED_CORE_FIELDS:
+        if f not in df.columns or pd.isna(df.at[0, f]):
+            missing.append(f)
+
+    # Hormonal presence
+    has_hormonal = any(
+        f in df.columns and not pd.isna(df.at[0, f])
+        for f in HORMONAL_FIELDS
+    )
+
+    # Ovarian presence
+    has_ovarian = any(
+        f in df.columns and not pd.isna(df.at[0, f])
+        for f in OVARIAN_FIELDS
+    )
+
+    # Count numeric values
+    for col in df.columns:
+        if col not in CATEGORICAL_COLS:
+            if not pd.isna(df.at[0, col]):
+                present_numeric += 1
+
+    errors = []
+
+    if missing:
+        errors.append("Missing core clinical fields")
+
+    if not has_hormonal:
+        errors.append("At least one hormonal marker required")
+
+    if not has_ovarian:
+        errors.append("At least one ovarian marker required")
+
+    if present_numeric < MIN_NUMERIC_FIELDS:
+        errors.append(
+            f"Insufficient numeric data ({present_numeric}/{MIN_NUMERIC_FIELDS})"
+        )
+
+    if not has_ultrasound:
+        errors.append("Ultrasound image required")
+
+    return {
+        "is_valid": len(errors) == 0,
+        "errors": errors,
+        "numeric_count": present_numeric,
+    }
 
 # =====================================================
 # MAIN PREDICTION FUNCTION
@@ -188,9 +270,32 @@ def predict_pcos(tabular_data: dict, ultrasound_bytes: bytes):
     df = pd.DataFrame([tabular_data])
     df = normalize_tabular_columns(df)
 
+    # Ensure all expected features exist
+    for col in TABULAR_FEATURES:
+        if col not in df.columns:
+            df[col] = np.nan
+
     df = df[TABULAR_FEATURES]
+    # Cast categoricals safely
     for col in CATEGORICAL_COLS:
-        df[col] = df[col].astype(str)
+        if col in df.columns:
+            df[col] = df[col].astype(str).fillna("UNKNOWN")
+
+    # ---------- CLINICAL SUFFICIENCY GATE ----------
+    sufficiency = check_data_sufficiency(
+        df,
+        has_ultrasound=ultrasound_bytes is not None
+    )
+
+    if not sufficiency["is_valid"]:
+        return {
+            "status": "INSUFFICIENT_DATA",
+            "message": "Not enough clinical data to assess PCOS risk safely",
+            "details": sufficiency["errors"],
+            "numeric_fields_present": sufficiency["numeric_count"],
+            "required_minimum_numeric": MIN_NUMERIC_FIELDS
+        }
+
 
     pool = Pool(df, cat_features=CATEGORICAL_COLS)
 

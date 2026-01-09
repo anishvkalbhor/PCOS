@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getCookie } from "@/lib/cookies";
 import { 
   Activity, 
   FileText, 
@@ -25,14 +26,19 @@ export default function ResultsPage() {
   const [result, setResult] = useState<PCOSResult | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("pcos_result");
+    const stored = getCookie("pcos_result");
 
     if (!stored) {
       router.push("/assess");
       return;
     }
 
-    setResult(JSON.parse(stored));
+    try {
+      setResult(JSON.parse(stored));
+    } catch {
+      console.warn("Invalid result data in cookie");
+      router.push("/assess");
+    }
   }, [router]);
 
   if (!result) {
