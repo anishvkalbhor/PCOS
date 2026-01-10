@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getCookie, setCookie } from "@/lib/cookies";
+import { saveResult } from "@/lib/storage";
 import { predictPCOS } from "@/lib/api";
 import {
   Activity,
@@ -383,10 +384,43 @@ export default function AssessPage() {
         fd.append("ultrasound", ultrasound);
       }
 
-      const result = await predictPCOS(fd);
-      setCookie("pcos_result", JSON.stringify(result), 1);
+      // ✅ Get token for authenticated requests
+      const token = getCookie("pcos_token");
+      const headers: HeadersInit = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      // ✅ Direct fetch instead of predictPCOS wrapper
+      const response = await fetch("http://127.0.0.1:8000/api/pcos/predict", {
+        method: "POST",
+        headers,
+        body: fd,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Prediction failed");
+      }
+
+      const result = await response.json();
+      console.log("✅ Received prediction result:", result);
+
+      // ✅ Validate result before saving
+      if (!result.final_pcos_probability || !result.risk_level) {
+        throw new Error("Invalid response from server");
+      }
+
+      // ✅ Save to sessionStorage (avoids cookie size limits)
+      saveResult(result);
+      
+      console.log("✅ Result saved, navigating to results...");
+      
+      // ✅ Navigate to results
       router.push("/results");
+      
     } catch (err: any) {
+      console.error("❌ Prediction error:", err);
       setError(err.message || "Prediction failed");
     } finally {
       setLoading(false);
