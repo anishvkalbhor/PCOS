@@ -1,8 +1,11 @@
+"use client";
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import Navbar from "@/components/Navbar";
+import { usePathname } from "next/navigation";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,24 +17,24 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "PCOS AI - Early Detection for Better Reproductive Health",
-  description: "AI-powered PCOS diagnostic tool combining clinical data and ultrasound imagery",
-};
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+  
+  // Hide navbar on auth pages
+  const isAuthPage = pathname === "/login" || pathname === "/register";
+
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <Navbar />
-          <div className="h-16"></div>
+          {!isAuthPage && <Navbar />}
+          {!isAuthPage && <div className="h-16"></div>}
           {children}
         </AuthProvider>
       </body>

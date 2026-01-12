@@ -131,7 +131,7 @@ export default function ProfilePage() {
                 className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
               />
             ) : (
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-teal-100 to-purple-100 flex items-center justify-center border-4 border-white shadow-lg">
+              <div className="w-24 h-24 rounded-full bg-linear-to-br from-teal-100 to-purple-100 flex items-center justify-center border-4 border-white shadow-lg">
                 {" "}
                 <User size={40} className="text-slate-600" />{" "}
               </div>

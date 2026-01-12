@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Activity, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import Image from "next/image";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,12 +13,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [focusedField, setFocusedField] = useState<string | null>(null);
-
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
+  const [form, setForm] = useState({ email: "", password: "" });
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -35,162 +31,154 @@ export default function LoginPage() {
         body: JSON.stringify(form),
       });
 
-      if (!res.ok) {
-        throw new Error("Invalid email or password");
-      }
-
+      if (!res.ok) throw new Error("Invalid credentials");
       const data = await res.json();
-
-      /**
-       * Expected backend response:
-       * {
-       *   access_token: string,
-       *   user: { id, email, first_name, last_name }
-       * }
-       */
       login(data.access_token, data.user);
-
-      router.push("/"); // home/dashboard
+      router.push("/");
     } catch (err: any) {
-      setError(err.message || "Login failed");
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="w-full max-w-md relative">
-      {/* Decorative gradient orbs */}
-      <div className="absolute -top-20 -left-20 w-40 h-40 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-      <div className="absolute -top-20 -right-20 w-40 h-40 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-      <div className="absolute -bottom-8 left-20 w-40 h-40 bg-pink-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#F3F4F6] p-4 lg:p-8">
+      {/* Main Card */}
+      <div className="bg-white w-full max-w-[1000px] h-auto lg:h-[600px] rounded-[32px] shadow-2xl overflow-hidden flex flex-col lg:flex-row">
+        {/* Left Side - Aurora Gradient (Visual & Branding) */}
+        <div className="w-full lg:w-5/12 relative p-8 lg:p-12 flex flex-col justify-end overflow-hidden">
+          {/* LOGO PLACEMENT LEFT (Desktop Only) */}
+          {/* Positioned absolutely at top-left. 'brightness-0 invert' makes a black logo white. Remove if your logo is already white. */}
+          <div className="absolute top-8 left-8 z-20 hidden lg:block">
+            <Image
+              src="/logo.png"
+              alt="PCOS AI"
+              width={70}
+              height={70}
+              className="object-contain brightness-0 invert"
+            />
+          </div>
 
-      <div className="relative bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200/50 overflow-hidden">
-        {/* Header with gradient */}
-        <div className="bg-gradient-to-br from-teal-600 via-teal-700 to-slate-900 p-8 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-          <div className="relative flex items-center gap-3 mb-2">
-            <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-              <Activity size={28} className="text-white" />
+          {/* THE GRADIENT BACKGROUND */}
+          <div className="absolute inset-0 z-0 bg-emerald-700">
+            <div className="absolute top-[-20%] right-[-20%] w-100 h-100 bg-emerald-300 rounded-full blur-[80px] opacity-70"></div>
+            <div className="absolute bottom-[-10%] left-[-10%] w-75 h-75 bg-emerald-600 rounded-full blur-[60px] opacity-90"></div>
+            <div className="absolute top-[40%] right-[10%] w-50 h-50 bg-teal-400 rounded-full blur-[60px] opacity-60"></div>
+          </div>
+
+          {/* Grain texture overlay */}
+          <div
+            className="absolute inset-0 z-[1] opacity-[0.15] mix-blend-overlay"
+            style={{
+              backgroundImage:
+                "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E\")",
+            }}
+          ></div>
+          {/* LOGO PLACEMENT RIGHT (Mobile Only) */}
+          <div className="lg:hidden flex bottom-0 justify-start items-start z-500">
+            <div className="w-20 h-20">
+              <Image
+                src="/logo.png"
+                alt="PCOS AI"
+                width={60}
+                height={60}
+                className="object-contain brightness-0 invert"
+              />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Welcome Back</h1>
-              <p className="text-teal-100 text-sm mt-1">Sign in to continue your health journey</p>
-            </div>
+          </div>
+          <div className="relative z-10">
+            <p className="text-emerald-100 text-sm font-medium mb-2">
+              You can easily
+            </p>
+            <h2 className="text-white text-3xl font-bold leading-tight">
+              Get access to your personal PCOS health tracking and AI-powered
+              insights
+            </h2>
           </div>
         </div>
 
-        <div className="p-8">
-          {error && (
-            <div className="mb-6 rounded-xl bg-red-50 border border-red-200 p-4 flex items-start gap-3 animate-shake">
-              <AlertCircle className="text-red-600 shrink-0 mt-0.5" size={20} />
-              <div>
-                <p className="text-red-900 font-semibold text-sm">Authentication Failed</p>
-                <p className="text-red-700 text-sm mt-0.5">{error}</p>
-              </div>
+        {/* Right Side - Form */}
+        <div className="w-full lg:w-7/12 bg-white p-8 lg:p-16 flex flex-col justify-center">
+          <div className="max-w-[400px] mx-auto w-full">
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-slate-900 mb-2">
+                Welcome back
+              </h1>
+              <p className="text-slate-500 text-sm">
+                Please enter your details to sign in.
+              </p>
             </div>
-          )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email Input */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                <Mail size={16} className="text-teal-600" />
-                Email Address
-              </label>
-              <div className={`relative group transition-all duration-300 ${
-                focusedField === 'email' ? 'scale-[1.02]' : ''
-              }`}>
+            {error && (
+              <div className="mb-6 p-3 rounded-lg bg-red-50 text-red-600 text-sm font-medium border border-red-100">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-1.5">
+                <label className="text-sm font-bold text-slate-900 block">
+                  Your email
+                </label>
                 <input
-                  name="email"
                   type="email"
-                  placeholder="you@example.com"
+                  name="email"
+                  placeholder="name@example.com"
                   value={form.email}
                   onChange={handleChange}
-                  onFocus={() => setFocusedField('email')}
-                  onBlur={() => setFocusedField(null)}
+                  className="w-full px-4 py-3.5 rounded-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                   required
-                  className="w-full px-4 py-3.5 pl-11 rounded-xl border-2 border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-100 outline-none transition-all duration-200 text-slate-900 placeholder:text-slate-400 bg-white"
                 />
-                <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 ${
-                  focusedField === 'email' ? 'text-teal-600' : 'text-slate-400'
-                }`} size={18} />
               </div>
-            </div>
 
-            {/* Password Input */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                <Lock size={16} className="text-teal-600" />
-                Password
-              </label>
-              <div className={`relative group transition-all duration-300 ${
-                focusedField === 'password' ? 'scale-[1.02]' : ''
-              }`}>
-                <input
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={handleChange}
-                  onFocus={() => setFocusedField('password')}
-                  onBlur={() => setFocusedField(null)}
-                  required
-                  className="w-full px-4 py-3.5 pl-11 pr-11 rounded-xl border-2 border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-100 outline-none transition-all duration-200 text-slate-900 placeholder:text-slate-400 bg-white"
-                />
-                <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-200 ${
-                  focusedField === 'password' ? 'text-teal-600' : 'text-slate-400'
-                }`} size={18} />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-teal-600 transition-colors p-1 rounded-lg hover:bg-teal-50"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+              <div className="space-y-1.5">
+                <label className="text-sm font-bold text-slate-900 block">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder="••••••••"
+                    value={form.password}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3.5 rounded-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all pr-12"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white py-4 rounded-xl font-bold text-lg transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-teal-600/30 hover:shadow-xl hover:shadow-teal-600/40 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 group mt-6"
-            >
-              {loading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Signing in...</span>
-                </>
-              ) : (
-                <>
-                  <span>Sign In</span>
-                  <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
-                </>
-              )}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold py-3.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 mt-4"
+              >
+                {loading ? (
+                  <Loader2 className="animate-spin" size={20} />
+                ) : (
+                  "Log In"
+                )}
+              </button>
+            </form>
 
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-slate-500 font-medium">New to PCOS Care?</span>
-            </div>
+            <p className="text-center text-sm text-slate-500 mt-8">
+              Don't have an account?{" "}
+              <a
+                href="/register"
+                className="text-emerald-600 font-semibold hover:underline"
+              >
+                Sign up
+              </a>
+            </p>
           </div>
-
-          {/* Register Link */}
-          <a
-            href="/register"
-            className="block w-full text-center py-3.5 rounded-xl border-2 border-slate-200 hover:border-teal-500 text-slate-700 hover:text-teal-700 font-semibold transition-all duration-200 hover:bg-teal-50 group"
-          >
-            <span className="flex items-center justify-center gap-2">
-              Create New Account
-              <ArrowRight className="group-hover:translate-x-1 transition-transform" size={18} />
-            </span>
-          </a>
         </div>
       </div>
     </div>
