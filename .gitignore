@@ -51,6 +51,7 @@ venv.bak/
 *.pb
 *.ckpt
 *.pth
+/models
 
 # Data files
 *.csv
